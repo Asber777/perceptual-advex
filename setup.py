@@ -22,6 +22,7 @@ setup(
         'advex-uar>=0.0.5.dev0',
         'statsmodels==0.11.1',
         'recoloradv==0.0.1',
+        'advfussion'
     ],
     classifiers=[
         'Development Status :: 3 - Alpha',

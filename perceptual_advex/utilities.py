@@ -56,7 +56,7 @@ def add_dataset_model_arguments(parser, include_checkpoint=False):
                         help='model architecture')
     parser.add_argument('--dataset', type=str, default='cifar',
                         help='dataset name')
-    parser.add_argument('--dataset_path', type=str, default='~/datasets',
+    parser.add_argument('--dataset_path', type=str, default='/root/datasets',
                         help='path to datasets directory')
 
 

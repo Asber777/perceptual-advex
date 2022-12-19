@@ -1,4 +1,4 @@
-from typing import Any, Callable, List, Optional, cast
+from typing import Any, Callable, List, Optional
 import torch
 import argparse
 import numpy as np
@@ -14,10 +14,26 @@ from perceptual_advex import evaluation
 from perceptual_advex.utilities import add_dataset_model_arguments, \
     get_dataset_model, calculate_accuracy
 from perceptual_advex.attacks import *
+from perceptual_advex.advfussion_attacks import *
 from perceptual_advex.models import FeatureModel
 
 VAL_ITERS = 100
 
+'''
+33s/100pic in advDDPM
+500 batch for bs=100
+33*500/60/60*90 = 412.5hours = 17.1875 days
+---
+167 batches for bs = 300
+60*167/2/60/60*90 = 187.875 hours = 7.828 days
+---
+50000 pic
+50batch for bs = 1000
+#  bs = 1000 2GPU 26413MiB/GPU
+800*50/ EPOCH *90
+60/60/24 = 4.62
+# 最多41天? 不一定 因为8s/it这个是在一开始 early stop估计
+'''
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -26,12 +42,14 @@ if __name__ == '__main__':
 
     parser.add_argument('--num_epochs', type=int, required=False,
                         help='number of epochs trained')
-    parser.add_argument('--batch_size', type=int, default=100,
+    parser.add_argument('--batch_size', type=int, default=1000, # 100
                         help='number of examples/minibatch')
-    parser.add_argument('--val_batches', type=int, default=10,
+    parser.add_argument('--val_batch_size', type=int, default=500,
+                        help='number of valation examples/minibatch')
+    parser.add_argument('--val_batches', type=int, default=1,
                         help='number of batches to validate on')
     parser.add_argument('--log_dir', type=str, default='data/logs')
-    parser.add_argument('--parallel', type=int, default=1,
+    parser.add_argument('--parallel', type=int, default=2,
                         help='number of GPUs to train on')
 
     parser.add_argument('--lpips_model', type=str, required=False,
@@ -109,7 +127,8 @@ if __name__ == '__main__':
             lpips_model.cuda()
 
     train_loader, val_loader = dataset.make_loaders(
-        workers=4, batch_size=args.batch_size)
+        workers=4, batch_size=args.batch_size, 
+        val_batch_size = args.val_batch_size)
 
     attacks = [eval(attack_str) for attack_str in args.attack]
     validation_attacks = [
@@ -260,6 +279,7 @@ if __name__ == '__main__':
             if to_attack.sum() > 0:
                 attack_adv_inputs[to_attack] = attack(inputs[to_attack],
                                                       labels[to_attack])
+                # attack_adv_inputs[to_attack] = inputs[to_attack]
             adv_inputs_list.append(attack_adv_inputs)
         adv_inputs: torch.Tensor = torch.cat(adv_inputs_list)
 
@@ -328,7 +348,7 @@ if __name__ == '__main__':
 
             run_iter(inputs, labels, iteration)
             iteration += 1
-        print(f'END EPOCH {epoch:04d}')
+        print(f'END EPOCH {epoch:04d}') 
 
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
