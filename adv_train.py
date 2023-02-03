@@ -81,7 +81,8 @@ if __name__ == '__main__':
 
     parser.add_argument('--attack', type=str, action='append',
                         help='attack(s) to harden against')
-
+    parser.add_argument('--use_half', default=False, action='store_true',
+                        help='if use use_half')
     args = parser.parse_args()
 
     if args.optim == 'adam':
@@ -277,8 +278,12 @@ if __name__ == '__main__':
         for attack in step_attacks:
             attack_adv_inputs = inputs.clone()
             if to_attack.sum() > 0:
-                attack_adv_inputs[to_attack] = attack(inputs[to_attack],
-                                                      labels[to_attack])
+                if args.use_half:
+                    attack_adv_inputs[to_attack] = attack(None,
+                                                      labels[to_attack], use_half=True)    
+                else:
+                    attack_adv_inputs[to_attack] = attack(inputs[to_attack],
+                                                        labels[to_attack])
                 # attack_adv_inputs[to_attack] = inputs[to_attack]
             adv_inputs_list.append(attack_adv_inputs)
         adv_inputs: torch.Tensor = torch.cat(adv_inputs_list)
