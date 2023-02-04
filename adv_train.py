@@ -81,8 +81,8 @@ if __name__ == '__main__':
 
     parser.add_argument('--attack', type=str, action='append',
                         help='attack(s) to harden against')
-    parser.add_argument('--use_half', default=False, action='store_true',
-                        help='if use use_half')
+    parser.add_argument('--use_contrastive', default=False, action='store_true',
+                        help='if use half start')            
     args = parser.parse_args()
 
     if args.optim == 'adam':
@@ -108,7 +108,7 @@ if __name__ == '__main__':
                 args.lr = 1e-1
             if args.lr_schedule is None:
                 args.lr_schedule = '30,60,80'
-            if args.num_epochs is None:
+            if args.num_epochs is None
                 args.num_epochs = 90
 
     torch.manual_seed(args.seed)
@@ -278,12 +278,15 @@ if __name__ == '__main__':
         for attack in step_attacks:
             attack_adv_inputs = inputs.clone()
             if to_attack.sum() > 0:
-                if args.use_half:
-                    attack_adv_inputs[to_attack] = attack(None,
-                                                      labels[to_attack], use_half=True)    
+                log_fn('to_attack.sum()', to_attack.sum().item())
+                print('to_attack.sum()', to_attack.sum().item())
+                if not args.use_contrastive:
+                    attack_adv_inputs[to_attack] = attack(inputs[to_attack],
+                                                        labels[to_attack]) 
                 else:
                     attack_adv_inputs[to_attack] = attack(inputs[to_attack],
-                                                        labels[to_attack])
+                                                        labels[to_attack],
+                                                        contrastive=True)  
                 # attack_adv_inputs[to_attack] = inputs[to_attack]
             adv_inputs_list.append(attack_adv_inputs)
         adv_inputs: torch.Tensor = torch.cat(adv_inputs_list)

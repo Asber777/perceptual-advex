@@ -119,9 +119,9 @@ class AdvFussionImagNet(AdvFussionAttack):
             mean = mean.float() + delta.data.float() 
         return mean
 
-    def forward(self, inputs, labels, use_half=True, progress=False, adversarial=True):
+    def forward(self, inputs, labels, progress=False, adversarial=True):
         labels = th.tensor(labels).to(self.device)
-        if not use_half or inputs is None:
+        if inputs is None:
             sample = self.diffusion.p_sample_loop(
                 lambda x, t, y, **kwargs: 
                     self.f_model(x, t, y),
@@ -189,24 +189,22 @@ class AdvFussionCIFAR10(AdvFussionAttack):
             'adver_scale':self.adver_scale, 
         }
 
-    def forward(self, inputs, labels, use_half=True, adversarial=True):
+    def forward(self, inputs, labels, adversarial=True, contrastive=False):
         with th.no_grad(): 
             mask = 0
-            if not use_half or inputs is None:
+            model_kwargs = {"mask":mask, "modelConfig":self.get_config(),
+                    "adversarial":adversarial, "contrastive":contrastive}
+            if self.start_t == 500:
                 assert isinstance(labels, th.Tensor)
-                # labels = th.tensor(labels).to(self.device)
                 xt = th.randn(size=[len(labels), 3, 32, 32], device=self.device)
-                model_kwargs = {"mask":mask, "modelConfig":self.get_config(), "adversarial":adversarial}
-                sample = self.diffusion(xt, labels, self.model, 500, kwargs=model_kwargs)
             else:
                 assert not (inputs<0).any()
                 img, labels = inputs.to(self.device), labels.to(self.device)
                 if self.use_cam:
                     grad_cam = GradCamPlusPlus(self.model, self.layer_name)
                     mask = grad_cam(img).unsqueeze(1)
-                model_kwargs = {"mask":mask, "modelConfig":self.get_config(), "adversarial":adversarial}
                 xt = self.diffusion.get_xt(x_0=img*2-1, t=self.start_t-1)
-                sample = self.diffusion(xt, labels, self.model, 
+            sample = self.diffusion(xt, labels, self.model, 
                     self.start_t, kwargs=model_kwargs)
             sample = th.clamp(sample,-1.,1.)
             return (sample+1)/2
