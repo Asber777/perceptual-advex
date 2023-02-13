@@ -189,11 +189,13 @@ class AdvFussionCIFAR10(AdvFussionAttack):
             'adver_scale':self.adver_scale, 
         }
 
-    def forward(self, inputs, labels, adversarial=True, contrastive=False):
+    def forward(self, inputs, labels, adversarial=True, contrastive=False, it=None):
         with th.no_grad(): 
             mask = 0
             model_kwargs = {"mask":mask, "modelConfig":self.get_config(),
                     "adversarial":adversarial, "contrastive":contrastive}
+            if it is not None and it <= self.nb_iter_conf:
+                model_kwargs['modelConfig']['nb_iter_conf'] = it
             if self.start_t == 500:
                 assert isinstance(labels, th.Tensor)
                 xt = th.randn(size=[len(labels), 3, 32, 32], device=self.device)

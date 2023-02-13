@@ -42,7 +42,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--num_epochs', type=int, required=False,
                         help='number of epochs trained')
-    parser.add_argument('--batch_size', type=int, default=1000, # 100
+    parser.add_argument('--batch_size', type=int, default=100, # 100
                         help='number of examples/minibatch')
     parser.add_argument('--val_batch_size', type=int, default=500,
                         help='number of valation examples/minibatch')
@@ -108,7 +108,7 @@ if __name__ == '__main__':
                 args.lr = 1e-1
             if args.lr_schedule is None:
                 args.lr_schedule = '30,60,80'
-            if args.num_epochs is None
+            if args.num_epochs is None:
                 args.num_epochs = 90
 
     torch.manual_seed(args.seed)
@@ -145,6 +145,7 @@ if __name__ == '__main__':
         StAdvAttack(model, num_iterations=VAL_ITERS),
         ReColorAdvAttack(model, num_iterations=VAL_ITERS),
         LagrangePerceptualAttack(model, num_iterations=30),
+        PerceptualPGDAttack(model, num_iterations=40, lpips_model='alexnet')
     ]
 
     flags = []
@@ -248,6 +249,7 @@ if __name__ == '__main__':
         inputs: torch.Tensor,
         labels: torch.Tensor,
         iteration: int,
+        epoch: int,
         train: bool = True,
         log_fn: Optional[Callable[[str, Any], Any]] = None,
     ):
@@ -283,10 +285,11 @@ if __name__ == '__main__':
                 if not args.use_contrastive:
                     attack_adv_inputs[to_attack] = attack(inputs[to_attack],
                                                         labels[to_attack]) 
-                else:
+                else: # since use_contrastive only when attack is AdvDDPM attack
                     attack_adv_inputs[to_attack] = attack(inputs[to_attack],
                                                         labels[to_attack],
-                                                        contrastive=True)  
+                                                        contrastive=True,
+                                                        it = epoch)  
                 # attack_adv_inputs[to_attack] = inputs[to_attack]
             adv_inputs_list.append(attack_adv_inputs)
         adv_inputs: torch.Tensor = torch.cat(adv_inputs_list)
@@ -354,7 +357,7 @@ if __name__ == '__main__':
             for param_group in optimizer.param_groups:
                 param_group['lr'] = lr
 
-            run_iter(inputs, labels, iteration)
+            run_iter(inputs, labels, iteration, epoch)
             iteration += 1
         print(f'END EPOCH {epoch:04d}') 
 
